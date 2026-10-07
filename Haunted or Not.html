@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Haunted or Not</title>
+<style>
+:root{--bg:#07090d;--panel:#10141b;--line:#29313d;--text:#e9edf2;--muted:#8d98a8;--accent:#b9c5d6;--danger:#c55b67}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 50% 0,#171d28 0,#080a0f 45%,#050609 100%);color:var(--text);font-family:Arial,Helvetica,sans-serif;min-height:100vh}
+header{padding:18px 20px 10px;text-align:center;border-bottom:1px solid #1e2530;background:#080a0eee;position:sticky;top:0;z-index:20}
+h1{margin:0;font-size:28px;letter-spacing:4px}.sub{color:var(--muted);font-size:11px;letter-spacing:2px;margin-top:5px}
+main{max-width:1250px;margin:auto;padding:14px}.top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.case{font-weight:bold;letter-spacing:2px}.status{color:var(--muted);font-size:12px}
+.viewer{height:min(68vh,700px);min-height:420px;border:1px solid var(--line);border-radius:12px;background:#020305;overflow:hidden;position:relative;touch-action:none;box-shadow:0 20px 60px #0008}
+#stage{position:absolute;left:50%;top:50%;transform-origin:center center;cursor:grab;will-change:transform}
+#stage.drag{cursor:grabbing}
+#photo{display:block;max-width:none;width:1100px;height:auto;user-select:none;-webkit-user-drag:none;filter:brightness(1) contrast(1)}
+.overlay{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.grain{position:absolute;inset:-20%;opacity:.08;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.7'/%3E%3C/svg%3E");mix-blend-mode:overlay}
+.fx-shadow{position:absolute;background:rgba(0,0,0,.55);filter:blur(10px);border-radius:50% 40% 55% 35%;transform:rotate(-12deg)}
+.fx-entity{position:absolute;width:55px;height:145px;background:linear-gradient(#111b,#000b);border-radius:45% 45% 20% 20%;filter:blur(2px);box-shadow:0 0 18px #000}
+.fx-eye{position:absolute;width:7px;height:7px;background:#ddd;border-radius:50%;box-shadow:0 0 8px #fff}
+.fx-light{position:absolute;width:90px;height:90px;border-radius:50%;background:#fff8;filter:blur(18px)}
+.fx-distort{position:absolute;border-left:2px solid #fff4;border-right:2px solid #fff2;filter:blur(1px)}
+.fx-reflect{position:absolute;border:1px solid #fff4;border-radius:50%;filter:blur(1px);transform:scaleX(.5)}
+.solution-ring{position:absolute;border:4px solid #ff3344;border-radius:50%;box-shadow:0 0 0 2px #0008,0 0 18px #ff334488;pointer-events:none;display:none;z-index:30}.solution-ring.show{display:block}
+.controls{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:10px 0}
+.control{background:var(--panel);border:1px solid var(--line);padding:8px 10px;border-radius:8px}.control label{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:4px}
+input[type=range]{width:100%}
+.decisions{display:flex;justify-content:center;gap:24px;margin:14px 0}
+.decide{width:105px;height:105px;border-radius:50%;border:1px solid #465160;background:#111720;color:#e7ebf0;font-weight:bold;font-size:12px;letter-spacing:1px;cursor:pointer}
+.decide:hover{background:#1a222d}.decide.selected{background:#dfe5ec;color:#080b10;border-color:#fff;box-shadow:0 0 25px #cbd5e122}
+#anomalyBox{display:none;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:8px}
+#anomalyBox.show{display:block}.anoms{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:8px}
+.anom{padding:9px 5px;background:#0b0f15;border:1px solid #2b3440;color:#cfd6df;border-radius:7px;cursor:pointer;font-size:11px}
+.anom.selected{border-color:#eef2f6;background:#dfe5ec;color:#080b10}
+.actions{display:flex;gap:8px;justify-content:center;margin:14px 0}.btn{border:1px solid #475260;background:#121821;color:#e8ecf1;padding:11px 18px;border-radius:8px;font-weight:bold;cursor:pointer}.btn.primary{background:#e5e9ee;color:#07090c}.btn.danger{border-color:#6d3940;color:#e7b8be}
+#solution{display:none;background:#0d1219;border:1px solid #35404e;border-radius:10px;padding:16px;margin:12px 0}.result{font-size:18px;font-weight:bold}.correct{color:#9ed6ad}.wrong{color:#e1a0a7}.explain{color:#aeb7c4;line-height:1.5;margin-top:8px}
+.stats{display:none;background:#0d1219;border:1px solid #35404e;border-radius:10px;padding:16px}.statsGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.stat{background:#090d13;border:1px solid #202a35;padding:12px;border-radius:7px}.stat b{display:block;font-size:22px;margin-top:4px}
+small{color:var(--muted)}
+@media(max-width:700px){h1{font-size:22px}.viewer{height:60vh;min-height:360px}.controls{grid-template-columns:1fr}.decisions{gap:10px}.decide{width:88px;height:88px;font-size:10px}.anoms{grid-template-columns:repeat(2,1fr)}.statsGrid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<header><h1>HAUNTED OR NOT</h1><div class="sub">PARANORMAL PHOTO INVESTIGATION • 1000 CASES</div></header>
+<main>
+<div class="top"><div class="case" id="caseNo">CASE 001</div><div class="status" id="poolStatus">1000 FOTO'S OVER</div></div>
+<div class="viewer" id="viewer">
+  <div id="stage"><img id="photo" draggable="false"><div class="overlay" id="overlay"></div></div>
+  <div class="grain"></div>
+</div>
+<div class="controls">
+  <div class="control"><label>BRIGHTNESS <span id="bv">100%</span></label><input id="brightness" type="range" min="50" max="160" value="100"></div>
+  <div class="control"><label>CONTRAST <span id="cv">100%</span></label><input id="contrast" type="range" min="50" max="180" value="100"></div>
+  <div class="control"><label>ZOOM <span id="zv">100%</span></label><input id="zoom" type="range" min="50" max="240" value="100"></div>
+</div>
+<div class="decisions">
+  <button class="decide" data-v="HAUNTED">HAUNTED</button>
+  <button class="decide" data-v="NOT HAUNTED">NOT<br>HAUNTED</button>
+  <button class="decide" data-v="UNSURE">UNSURE</button>
+</div>
+<div id="anomalyBox"><small>WELK TYPE ANOMALIE?</small><div class="anoms" id="anoms"></div></div>
+<div class="actions"><button class="btn primary" id="submit">SUBMIT CASE</button><button class="btn" id="next" style="display:none">NEXT CASE</button><button class="btn danger" id="end">END RUN</button></div>
+<div id="solution"></div>
+<div id="stats"></div>
+</main>
+<script>
+const TYPES=["Apparition","Shadow","Reflection","Distortion","Entity","Light Anomaly","Camera Artifact","Animal","Person","Object","Unknown","None"];
+const COUNT=1000;
+const cases=[];
+for(let i=1;i<=COUNT;i++){
+  // Deterministic case truth based on id. Roughly 60% haunted, 40% not.
+  const haunted=(i%5!==0 && i%7!==0);
+  const pool=TYPES.filter(x=>x!=="None");
+  const anomaly=haunted?pool[(i*37)%pool.length]:"None";
+  cases.push({id:i,url:`https://picsum.photos/id/${i}/1600/1050`,haunted,anomaly});
+}
+const usedKey="hon_used_v4", runKey="hon_run_v4", statsKey="hon_stats_v4";
+let used=JSON.parse(localStorage.getItem(usedKey)||"[]");
+let run=JSON.parse(localStorage.getItem(runKey)||'{"cases":0,"correct":0,"hauntCorrect":0,"anomalyCorrect":0,"streak":0,"best":0}');
+let stats=JSON.parse(localStorage.getItem(statsKey)||'{"total":0,"correct":0}');
+let cur=null, answer=null, anomaly=null, submitted=false, scale=1,x=0,y=0,drag=false,sx=0,sy=0;
+const $=id=>document.getElementById(id), photo=$("photo"),stage=$("stage"),viewer=$("viewer"),overlay=$("overlay");
+
+function pick(){
+  if(used.length>=COUNT) used=[];
+  let available=[];
+  for(let i=1;i<=COUNT;i++) if(!used.includes(i)) available.push(i);
+  // Randomly choose among remaining cases; no repeat until the whole pool is exhausted.
+  const id=available[Math.floor(Math.random()*available.length)];
+  used.push(id); localStorage.setItem(usedKey,JSON.stringify(used));
+  return cases[id-1];
+}
+function resetView(){scale=1;x=0;y=0;$("brightness").value=100;$("contrast").value=100;$("zoom").value=100;updateView()}
+function updateView(){
+  stage.style.transform=`translate(-50%,-50%) translate(${x}px,${y}px) scale(${scale})`;
+  photo.style.filter=`brightness(${$("brightness").value/100}) contrast(${$("contrast").value/100})`;
+  $("bv").textContent=$("brightness").value+"%";$("cv").textContent=$("contrast").value+"%";$("zv").textContent=Math.round(scale*100)+"%";
+}
+function loadCase(){
+  cur=pick(); answer=null;anomaly=null;submitted=false;resetView();
+  $("caseNo").textContent="CASE "+String(run.cases+1).padStart(3,"0");
+  $("poolStatus").textContent=(COUNT-used.length)+" FOTO'S NOG NIET GEZIEN";
+  document.querySelectorAll(".decide").forEach(b=>b.classList.remove("selected"));
+  $("anomalyBox").classList.remove("show");$("solution").style.display="none";$("next").style.display="none";$("submit").style.display="inline-block";
+  photo.src=cur.url;
+  photo.alt="Evidence photo";
+  overlay.innerHTML="";
+  const ring=document.createElement("div"); ring.id="solutionRing"; ring.className="solution-ring"; overlay.appendChild(ring);
+  // Subtle deterministic anomaly layer on haunted cases.
+  if(cur.haunted) makeAnomaly(cur.anomaly,cur.id);
+}
+function markAnomaly(el,w,h){ el.dataset.ax=parseFloat(el.style.left)||0; el.dataset.ay=parseFloat(el.style.top)||0; el.dataset.aw=w; el.dataset.ah=h; }
+function makeAnomaly(type,id){
+  const r=n=>((id*97+n*43)%100);
+  if(type==="Shadow"){
+    const e=document.createElement("div");e.className="fx-shadow";e.style.left=(r(1))+"%";e.style.top=(r(2))+"%";e.style.width=(90+r(3))+"px";e.style.height=(130+r(4))+"px";overlay.appendChild(e); markAnomaly(e,Math.max(70,parseFloat(e.style.width)||100),Math.max(100,parseFloat(e.style.height)||140));
+  } else if(type==="Entity"){
+    const e=document.createElement("div");e.className="fx-entity";e.style.left=r(5)+"%";e.style.top=(25+r(6)/2)+"%";overlay.appendChild(e); markAnomaly(e,65,155);
+  } else if(type==="Light Anomaly"){
+    const e=document.createElement("div");e.className="fx-light";e.style.left=r(7)+"%";e.style.top=r(8)+"%";overlay.appendChild(e); markAnomaly(e,110,110);
+  } else if(type==="Reflection"){
+    const e=document.createElement("div");e.className="fx-reflect";e.style.left=r(9)+"%";e.style.top=r(10)+"%";e.style.width=(90+r(11))+"px";e.style.height=(150+r(12))+"px";overlay.appendChild(e);
+  } else if(type==="Distortion"){
+    for(let k=0;k<3;k++){const e=document.createElement("div");e.className="fx-distort";e.style.left=(r(13+k)*1)+"%";e.style.top=(20+r(16+k)/2)+"%";e.style.width=(25+r(20+k))+"px";e.style.height=(30+r(23+k))+"px";overlay.appendChild(e)}
+  } else if(type==="Apparition"||type==="Person"){
+    const e=document.createElement("div");e.className="fx-entity";e.style.left=r(24)+"%";e.style.top=(18+r(25)/2)+"%";e.style.opacity=".38";overlay.appendChild(e);
+  } else if(type==="Camera Artifact"){
+    for(let k=0;k<6;k++){const e=document.createElement("div");e.style.position="absolute";e.style.height="1px";e.style.background="#fff5";e.style.left="0";e.style.right="0";e.style.top=(r(30+k))+"%";overlay.appendChild(e)}
+  } else if(type==="Object"||type==="Unknown"){
+    const e=document.createElement("div");e.className="fx-eye";e.style.left=r(40)+"%";e.style.top=r(41)+"%";e.style.opacity=".55";overlay.appendChild(e);
+  } else if(type==="Animal"){
+    const e=document.createElement("div");e.className="fx-shadow";e.style.left=r(42)+"%";e.style.top=(45+r(43)/2)+"%";e.style.width="95px";e.style.height="65px";e.style.opacity=".35";overlay.appendChild(e);
+  }
+}
+document.querySelectorAll(".decide").forEach(b=>b.onclick=()=>{
+  if(submitted)return;
+  document.querySelectorAll(".decide").forEach(x=>x.classList.remove("selected"));
+  b.classList.add("selected");answer=b.dataset.v;
+  if(answer==="NOT HAUNTED"){anomaly="None";$("anomalyBox").classList.remove("show")}
+  else {$("anomalyBox").classList.add("show");renderAnoms()}
+});
+function revealSolutionRing(){
+  const ring=$("solutionRing");
+  if(!ring || !cur.haunted)return;
+  const els=[...overlay.children].filter(e=>e!==ring && getComputedStyle(e).display!=="none");
+  if(!els.length)return;
+  const base=overlay.getBoundingClientRect();
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  els.forEach(e=>{const r=e.getBoundingClientRect(); minX=Math.min(minX,r.left); minY=Math.min(minY,r.top); maxX=Math.max(maxX,r.right); maxY=Math.max(maxY,r.bottom);});
+  const pad=12;
+  ring.style.left=(minX-base.left-pad)+"px";
+  ring.style.top=(minY-base.top-pad)+"px";
+  ring.style.width=(maxX-minX+pad*2)+"px";
+  ring.style.height=(maxY-minY+pad*2)+"px";
+  ring.classList.add("show");
+}
+function renderAnoms(){
+  $("anoms").innerHTML="";
+  TYPES.forEach(t=>{const b=document.createElement("button");b.className="anom";b.textContent=t;b.onclick=()=>{anomaly=t;document.querySelectorAll(".anom").forEach(x=>x.classList.remove("selected"));b.classList.add("selected")};$("anoms").appendChild(b)})
+}
+$("submit").onclick=()=>{
+  if(submitted)return;
+  if(!answer){alert("Kies eerst HAUNTED, NOT HAUNTED of UNSURE.");return}
+  if(answer!=="NOT HAUNTED"&&!anomaly){alert("Kies ook een anomalietype.");return}
+  submitted=true;
+  const truth=cur.haunted?"HAUNTED":"NOT HAUNTED", correctHaunt=answer===truth, correctAnomaly=anomaly===cur.anomaly;
+  const overall=correctHaunt&&correctAnomaly;
+  run.cases++;if(correctHaunt)run.hauntCorrect++;if(correctAnomaly)run.anomalyCorrect++;if(overall){run.correct++;run.streak++;run.best=Math.max(run.best,run.streak)}else run.streak=0;
+  stats.total++;if(overall)stats.correct++;
+  localStorage.setItem(runKey,JSON.stringify(run));localStorage.setItem(statsKey,JSON.stringify(stats));
+  const explain=truth==="NOT HAUNTED"?"Er was geen paranormale afwijking in deze foto. Daarom is de correcte anomalie altijd NONE.":`Deze case bevat een subtiele ${cur.anomaly}-afwijking.`;
+  $("solution").innerHTML=`<div class="result ${overall?"correct":"wrong"}">${overall?"✓ CORRECT":"✕ INCORRECT"}</div><div style="margin-top:8px"><b>Werkelijkheid:</b> ${truth}<br><b>Correcte anomalie:</b> ${cur.anomaly}</div><div class="explain">${explain}</div>`;
+  $("solution").style.display="block"; revealSolutionRing(); $("submit").style.display="none";$("next").style.display="inline-block";
+};
+$("next").onclick=loadCase;
+$("end").onclick=()=>{
+  $("stats").innerHTML=`<h3>RUN RESULTAAT</h3><div class="statsGrid"><div class="stat">CASES<b>${run.cases}</b></div><div class="stat">SCORE<b>${run.correct}/${run.cases}</b></div><div class="stat">HAUNTED ACCURACY<b>${run.cases?Math.round(run.hauntCorrect/run.cases*100):0}%</b></div><div class="stat">ANOMALY ACCURACY<b>${run.cases?Math.round(run.anomalyCorrect/run.cases*100):0}%</b></div><div class="stat">BEST STREAK<b>${run.best}</b></div><div class="stat">ALL-TIME<b>${stats.correct}/${stats.total}</b></div></div>`;
+  $("stats").style.display="block";window.scrollTo({top:document.body.scrollHeight,behavior:"smooth"});
+};
+function pointerDown(e){drag=true;stage.classList.add("drag");sx=e.clientX-x;sy=e.clientY-y}
+function pointerMove(e){if(!drag)return;x=e.clientX-sx;y=e.clientY-sy;updateView()}
+function pointerUp(){drag=false;stage.classList.remove("drag")}
+viewer.addEventListener("pointerdown",pointerDown);viewer.addEventListener("pointermove",pointerMove);window.addEventListener("pointerup",pointerUp);
+$("zoom").oninput=()=>{scale=$("zoom").value/100;updateView()};$("brightness").oninput=updateView;$("contrast").oninput=updateView;
+photo.onerror=()=>{photo.alt="Foto kon niet geladen worden. Internetverbinding nodig.";photo.style.opacity=".2"};
+loadCase();
+</script>
+</body>
+</html>
